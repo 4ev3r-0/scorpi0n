@@ -7,6 +7,7 @@
 #include "string.h"
 #include <stdio.h>
 #include <stdarg.h>
+#include <inttypes.h>
 
 static const char *TAG = "scor";
 
@@ -41,11 +42,15 @@ static scor_file_entry_t *s_entries = NULL;
 static const char *s_names = NULL;
 static uint32_t s_num_files = 0;
 
+// ---- Forward declarations ----
+const uint8_t *api_asset_get(const char *name, uint32_t *out_size);
+int api_asset_list(char *out, int max_entries, int entry_size);
+
 // ---- API implementations ----
 
 void api_fill_rect(int x, int y, int w, int h, uint32_t color)
 {
-    ESP_LOGI(TAG, "fill_rect(%d,%d,%d,%d,0x%06x)", x, y, w, h, color);
+    ESP_LOGI(TAG, "fill_rect(%d,%d,%d,%d,0x%06" PRIx32 ")", x, y, w, h, color);
 }
 
 void api_draw_image(const char *path, int x, int y, int w, int h)
@@ -53,7 +58,8 @@ void api_draw_image(const char *path, int x, int y, int w, int h)
     uint32_t size;
     const uint8_t *data = api_asset_get(path, &size);
     if (data) {
-        ESP_LOGI(TAG, "draw_image(%s, %ux%u, %d,%d)", path, size, w, h, x, y);
+        ESP_LOGI(TAG, "draw_image(%s, %" PRIu32 " bytes, %dx%d at %d,%d)",
+                 path, size, w, h, x, y);
     } else {
         ESP_LOGE(TAG, "Asset not found: %s", path);
     }
@@ -66,7 +72,7 @@ void api_draw_text(const char *text, int x, int y, uint32_t color)
 
 void api_clear(uint32_t color)
 {
-    ESP_LOGI(TAG, "clear(0x%06x)", color);
+    ESP_LOGI(TAG, "clear(0x%06" PRIx32 ")", color);
 }
 
 const uint8_t *api_asset_get(const char *name, uint32_t *out_size)
@@ -153,12 +159,12 @@ esp_err_t scor_load_and_run(const char *path)
     // Parse container header
     scor_container_t *hdr = (scor_container_t *)s_file_buf;
     if (hdr->magic != SCOR_MAGIC) {
-        ESP_LOGE(TAG, "Bad magic: 0x%08x", hdr->magic);
+        ESP_LOGE(TAG, "Bad magic: 0x%08" PRIx32, hdr->magic);
         scor_unload();
         return ESP_ERR_INVALID_ARG;
     }
     if (hdr->version != SCOR_VERSION) {
-        ESP_LOGE(TAG, "Unsupported version: %u", hdr->version);
+        ESP_LOGE(TAG, "Unsupported version: %" PRIu32, hdr->version);
         scor_unload();
         return ESP_ERR_NOT_SUPPORTED;
     }
@@ -167,7 +173,7 @@ esp_err_t scor_load_and_run(const char *path)
     s_entries = (scor_file_entry_t *)(s_file_buf + hdr->table_off);
     s_names = (const char *)(s_file_buf + hdr->names_off);
 
-    ESP_LOGI(TAG, "Container: %u files, %u bytes total", s_num_files, s_file_size);
+    ESP_LOGI(TAG, "Container: %" PRIu32 " files, %" PRIu32 " bytes total", s_num_files, s_file_size);
 
     // Find the "code" entry
     const uint8_t *code_data = NULL;
@@ -219,7 +225,7 @@ esp_err_t scor_load_and_run(const char *path)
     api->log         = api_log;
     api->get_tick_ms = api_get_tick_ms;
 
-    ESP_LOGI(TAG, "Executing (entry=0x%06x, api=0x%06x, load=%u, bss=%u)",
+    ESP_LOGI(TAG, "Executing (entry=0x%06" PRIx32 ", api=0x%06" PRIx32 ", load=%" PRIu32 ", bss=%" PRIu32 ")",
              entry_off, api_off, load_size, bss_size);
 
     // Jump
@@ -241,4 +247,4 @@ void scor_unload(void)
     s_entries = NULL;
     s_names = NULL;
     s_num_files = 0;
-}   
+}

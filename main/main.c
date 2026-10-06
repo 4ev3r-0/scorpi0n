@@ -97,7 +97,7 @@ static esp_err_t lvgl_init(void)
         .monochrome = false,
         .rotation = {
             .swap_xy = true,
-            .mirror_x = false,
+            .mirror_x = true,
             .mirror_y = false,
         },
         .flags = {

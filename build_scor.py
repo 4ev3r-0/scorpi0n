@@ -33,11 +33,17 @@ def build(src, out, assets_dir=None, toolchain_prefix="xtensa-esp32s3-elf-"):
     cmd = [
         cc,
         "-mtext-section-literals",
-        "-O2",
+        "-Os",
+        "-ffunction-sections",
+        "-fdata-sections",
+        "-fno-unwind-tables",
+        "-fno-asynchronous-unwind-tables",
         "-nostdlib",
         "-ffreestanding",
-        "-I.",
+        "-I.",              # project root (for scor.ld if it's there)
+        "-Imain",           # ← add this: where scor_api.h lives
         "-T", "scor.ld",
+        "-Wl,--gc-sections",
         "-Wl,-Map=" + out + ".map",
         "-o", elf,
         src,
